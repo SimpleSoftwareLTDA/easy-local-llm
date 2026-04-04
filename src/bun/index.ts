@@ -216,6 +216,7 @@ const url = await getMainViewUrl();
 const mainWindow = new BrowserWindow({
 	title: "Easy Local Chat",
 	titleBarStyle: "hidden",
+	transparent: true,
 	frame: {
 		width: 1024,
 		height: 768,
