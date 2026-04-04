@@ -2,7 +2,7 @@ import type { ElectrobunConfig } from "electrobun";
 
 export default {
 	app: {
-		name: "Easy Local LLM",
+		name: "Easy Local Chat",
 		identifier: "simple.software.ell",
 		version: "0.0.1",
 	},
@@ -28,12 +28,5 @@ export default {
 			icon: "assets/icon.ico",
 			bundleCEF: false,
 		},
-	},
-	scripts: {
-		/**
-		 * Electrobun v1.16.0 has a bug on Windows where it tries to use a hardcoded
-		 * CI path for rcedit (D:\a\...). This manually fixes the icons after build.
-		 */
-		postBuild: "scripts/fix-win-icon.ts",
-	},
+	}
 } satisfies ElectrobunConfig;

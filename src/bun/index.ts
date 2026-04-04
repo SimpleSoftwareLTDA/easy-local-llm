@@ -168,7 +168,7 @@ async function getMainViewUrl(): Promise<string> {
 const url = await getMainViewUrl();
 
 const mainWindow = new BrowserWindow({
-	title: "Easy Local LLM",
+	title: "Easy Local Chat",
 	titleBarStyle: "hidden",
 	frame: {
 		width: 1024,
@@ -204,7 +204,7 @@ if (mainWindow.webview.rpc) {
 	});
 }
 
-console.log("Easy Local LLM started!");
+console.log("Easy Local Chat started!");
 
 const cleanup = () => {
     if (serverProc) {

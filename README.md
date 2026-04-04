@@ -1,7 +1,7 @@
-# 🪶 ELL: Easy Local LLM
+# 🪶 ELL: Easy Local Chat
 ## Private Intelligence on Your Hardware with no configurations.
 
-[![Easy Local LLM](https://img.shields.io/badge/Status-Ready-success?style=for-the-badge&logo=ai)](https://github.com/SimpleSoftwareLTDA/easy-local-llm)
+[![Easy Local Chat](https://img.shields.io/badge/Status-Ready-success?style=for-the-badge&logo=ai)](https://github.com/SimpleSoftwareLTDA/easy-local-llm)
 [![Electrobun](https://img.shields.io/badge/Built%20with-Electrobun-blue?style=for-the-badge)](https://electrobun.dev)
 
 ### **Run AI without cloud dependency or complex setup.**
