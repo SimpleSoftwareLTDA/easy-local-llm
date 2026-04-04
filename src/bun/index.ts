@@ -10,6 +10,7 @@ const DEV_SERVER_URL = `http://localhost:${DEV_SERVER_PORT}`;
 // State for the local LLM server
 let llmStatus: "checking" | "downloading" | "launching" | "ready" | "error" = "checking";
 let downloadProgress = 0;
+let serverProc: any = null;
 
 async function downloadFile(url: string, path: string) {
 	const response = await fetch(url);
@@ -75,16 +76,24 @@ async function setupAndLaunch() {
 	    console.log("Launching llama-server...");
 	    
 	    // Since it's installed globally, we can call llama-server directly
-	    Bun.spawn([
+	    const serverProc = Bun.spawn([
 	        "llama-server",
 	        "-m", modelFile,
 	        "--port", "11444",
 	        "-c", "2048",
-	        "-np", "1"
+	        "-np", "1",
+	        "--flash-attn", "on", // Otimização massiva: Flash Attention
+	        "-ngl", "99"    // Forçar descarregamento das camadas pro Vulkan/GPU
 	    ], {
 	        cwd: engineDir,
 	        stdout: "pipe",
 	        stderr: "pipe"
+	    });
+	    serverProc.exited.then((exitCode) => {
+	        if (exitCode !== 0) {
+	            console.error("llama-server crashed silently with exit code:", exitCode);
+	            llmStatus = "error";
+	        }
 	    });
 	    
 	    // Poll until ready
@@ -158,3 +167,15 @@ const mainWindow = new BrowserWindow({
 });
 
 console.log("Easy Local LLM started!");
+
+const cleanup = () => {
+    if (serverProc) {
+        console.log("Shutting down llama-server...");
+        try { serverProc.kill(); } catch (e) {}
+        serverProc = null;
+    }
+};
+
+process.on("beforeExit", cleanup);
+process.on("SIGINT", () => { cleanup(); process.exit(0); });
+process.on("SIGTERM", () => { cleanup(); process.exit(0); });

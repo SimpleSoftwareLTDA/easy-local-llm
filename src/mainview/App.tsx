@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import ReactMarkdown from "react-markdown";
 
 function App() {
 	const [status, setStatus] = useState<"checking" | "downloading" | "ready" | "error">("checking");
@@ -6,6 +7,7 @@ function App() {
 	const [messages, setMessages] = useState<{ role: string; content: string }[]>([]);
 	const [input, setInput] = useState("");
 	const [isTyping, setIsTyping] = useState(false);
+	const [isThinkingEnabled, setIsThinkingEnabled] = useState(true);
 	const messagesEndRef = useRef<HTMLDivElement>(null);
 
 	const scrollToBottom = () => {
@@ -58,7 +60,11 @@ function App() {
 				headers: { "Content-Type": "application/json" },
 				body: JSON.stringify({
 					model: "gemma-4-e4b-it",
-					messages: [...messages, userMsg],
+					messages: [
+						{ role: "system", content: `${isThinkingEnabled ? "<|think|>" : ""}You are Ell, an incredibly smart and fast local assistant.` },
+						...messages, 
+						userMsg
+					],
 					stream: false
 				}),
 			});
@@ -107,12 +113,22 @@ function App() {
 	}
 
 	return (
-		<div className="min-h-screen bg-[#09090b] text-zinc-100 flex flex-col font-sans">
+		<div className="h-screen overflow-hidden bg-[#09090b] text-zinc-100 flex flex-col font-sans">
 			<header className="h-[72px] border-b border-white/5 bg-zinc-950/50 backdrop-blur-md flex items-center px-8 shrink-0 sticky top-0 z-10 w-full electrobun-webkit-app-region-drag">
 				<div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex justify-center items-center mr-3 shadow-lg shadow-indigo-500/20 electrobun-webkit-app-region-no-drag">
 					<span className="text-sm">✨</span>
 				</div>
-				<h1 className="text-lg font-semibold tracking-wide text-zinc-200 electrobun-webkit-app-region-no-drag">Easy Local LLM <span className="text-zinc-600 font-normal ml-2">Local Instance</span></h1>
+				<h1 className="text-lg font-semibold tracking-wide text-zinc-200 electrobun-webkit-app-region-no-drag">Easy Local LLM</h1>
+				
+				<div className="ml-auto electrobun-webkit-app-region-no-drag flex items-center gap-3">
+					<span className={`text-xs font-medium tracking-wide transition-colors ${isThinkingEnabled ? 'text-indigo-400' : 'text-zinc-600'}`}>Deep Think</span>
+					<button 
+						onClick={() => setIsThinkingEnabled(!isThinkingEnabled)}
+						className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none shadow-inner ${isThinkingEnabled ? 'bg-indigo-500' : 'bg-zinc-800'}`}
+					>
+						<span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${isThinkingEnabled ? 'translate-x-5' : 'translate-x-0'}`}></span>
+					</button>
+				</div>
 			</header>
 
 			<main className="flex-1 overflow-y-auto p-4 md:p-8 flex flex-col items-center custom-scrollbar">
@@ -134,7 +150,13 @@ function App() {
 										? "bg-zinc-800 text-zinc-100 rounded-br-sm border border-zinc-700/50" 
 										: "bg-gradient-to-br from-indigo-500/10 to-purple-500/10 text-zinc-200 rounded-bl-sm border border-indigo-500/20 backdrop-blur-sm shadow-[0_4px_24px_rgba(99,102,241,0.05)]"}
 								`}>
-									{msg.content}
+									{msg.role === "user" ? (
+										msg.content
+									) : (
+										<div className="prose prose-zinc prose-invert max-w-none prose-p:leading-snug prose-pre:bg-zinc-900/80 prose-pre:border prose-pre:border-white/10 prose-headings:font-medium prose-a:text-indigo-400">
+											<ReactMarkdown>{msg.content}</ReactMarkdown>
+										</div>
+									)}
 								</div>
 							</div>
 						))
@@ -153,7 +175,7 @@ function App() {
 				</div>
 			</main>
 
-			<footer className="w-full max-w-3xl mx-auto p-4 md:p-6 shrink-0 sticky bottom-0 z-10">
+			<footer className="w-full max-w-3xl mx-auto p-4 md:p-6 shrink-0">
 				<div className="relative flex items-center bg-zinc-900 border border-zinc-800 rounded-[2rem] p-2 shadow-2xl focus-within:border-indigo-500/50 focus-within:ring-1 focus-within:ring-indigo-500/50 transition-all duration-300">
 					<input
 						type="text"
@@ -175,7 +197,7 @@ function App() {
 						</svg>
 					</button>
 				</div>
-				<p className="text-center text-xs text-zinc-700 mt-4 mx-auto w-full">Easy Local LLM runs entirely on your local machine.</p>
+				<p className="text-center text-xs text-zinc-100 mt-4 mx-auto w-full">Easy Local LLM runs entirely on your local machine.</p>
 			</footer>
 		</div>
 	);
