@@ -38,7 +38,20 @@ async function setupAndLaunch() {
     try {
 	    llmStatus = "checking";
 	    
-	    // Use homedir to prevent Electrobun's `build` folder auto-purge from deleting the downloaded model
+	    // 1. Proactive check for existing llama.server instance on port 11444
+	    try {
+	        const res = await fetch("http://localhost:11444/health");
+	        if (res.ok) {
+	            console.log("Existing llama-server detected on port 11444. Reusing instance...");
+	            llmStatus = "ready";
+	            return;
+	        }
+	    } catch (e) {
+	        // Port free or server not responding, proceed with launch
+	        console.log("No existing llama-server detected. Proceeding with launch...");
+	    }
+	    
+	    // 2. Normal Setup Sequence
 	    const engineDir = join(homedir(), ".ell-engine");
 	    if (!existsSync(engineDir)) mkdirSync(engineDir);
 	    
@@ -76,7 +89,7 @@ async function setupAndLaunch() {
 	    console.log("Launching llama-server...");
 	    
 	    // Since it's installed globally, we can call llama-server directly
-	    const serverProc = Bun.spawn([
+	    serverProc = Bun.spawn([
 	        "llama-server",
 	        "-m", modelFile,
 	        "--port", "11444",
@@ -89,7 +102,7 @@ async function setupAndLaunch() {
 	        stdout: "pipe",
 	        stderr: "pipe"
 	    });
-	    serverProc.exited.then((exitCode) => {
+	    serverProc.exited.then((exitCode: number) => {
 	        if (exitCode !== 0) {
 	            console.error("llama-server crashed silently with exit code:", exitCode);
 	            llmStatus = "error";
@@ -157,14 +170,39 @@ const url = await getMainViewUrl();
 const mainWindow = new BrowserWindow({
 	title: "Easy Local LLM",
 	titleBarStyle: "hidden",
-	url,
 	frame: {
-		width: 1000,
-		height: 800,
-		x: 200,
-		y: 200,
+		width: 1024,
+		height: 768,
+		x: 100,
+		y: 100,
 	},
+	url,
 });
+
+// Window Controls via RPC Bridge
+if (mainWindow.webview.rpc) {
+	// @ts-ignore - Listening for custom window control signals from Renderer
+	mainWindow.webview.rpc.addMessageListener('window:minimize', () => {
+		console.log("RPC: Window [Minimize] received");
+		mainWindow.minimize();
+	});
+
+	// @ts-ignore
+	mainWindow.webview.rpc.addMessageListener('window:maximize', () => {
+		console.log("RPC: Window [Maximize] received");
+		if (mainWindow.isMaximized()) {
+			mainWindow.unmaximize();
+		} else {
+			mainWindow.maximize();
+		}
+	});
+
+	// @ts-ignore
+	mainWindow.webview.rpc.addMessageListener('window:close', () => {
+		console.log("RPC: Window [Close] received");
+		mainWindow.close();
+	});
+}
 
 console.log("Easy Local LLM started!");
 
