@@ -168,8 +168,8 @@ With these guidelines:
 								<div className="w-20 h-20 mb-6 bg-white/5 rounded-3xl flex items-center justify-center backdrop-blur-sm border border-white/5">
 									<img src={icon} alt="ELL Icon" className="w-12 h-12 object-contain" />
 								</div>
-								<h2 className="text-2xl font-medium tracking-tight mb-2">Ready to assist.</h2>
-								<p className="text-zinc-500">Fast, local, and private.</p>
+								<h2 className="text-2xl font-medium tracking-tight mb-2 text-white">Ready to assist.</h2>
+								<p className="text-zinc-300">Fast, local, and private.</p>
 							</div>
 						) : (
 							messages.map((msg, i) => (
