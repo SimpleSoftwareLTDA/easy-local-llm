@@ -10,7 +10,7 @@ on:
   workflow_dispatch:
     inputs:
       release:
-        description: 'Create release from this run'
+        description: Create release from this run
         type: boolean
         default: false
 
@@ -23,26 +23,21 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # Lint & Type Check
   lint:
     name: Lint & Type Check
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
-
       - name: Install dependencies
         run: bun install
-
       - name: TypeScript check
         run: bunx tsc --noEmit
 
-  # Build macOS ARM64
   build-macos-arm64:
     name: Build macOS (ARM64)
     runs-on: macos-latest
@@ -50,23 +45,18 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
-
       - name: Install dependencies
         run: bun install
-
       - name: Vite build
         run: bunx vite build
-
       - name: Build Electrobun app
         run: bunx electrobun build --env=canary
         env:
           NODE_ENV: production
-
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
@@ -74,7 +64,6 @@ jobs:
           path: build/
           retention-days: 14
 
-  # Build Windows x64
   build-windows-x64:
     name: Build Windows (x64)
     runs-on: windows-latest
@@ -82,23 +71,18 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
-
       - name: Install dependencies
         run: bun install
-
       - name: Vite build
         run: bunx vite build
-
       - name: Build Electrobun app
         run: bunx electrobun build --env=canary
         env:
           NODE_ENV: production
-
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
@@ -106,7 +90,6 @@ jobs:
           path: build/
           retention-days: 14
 
-  # Build Linux x64
   build-linux-x64:
     name: Build Linux (x64)
     runs-on: ubuntu-latest
@@ -114,18 +97,14 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
-
       - name: Install dependencies
         run: bun install
-
       - name: Vite build
         run: bunx vite build
-
       - name: Build Electrobun app
         run: bunx electrobun build --env=canary
         env:
@@ -134,9 +113,7 @@ jobs:
       - name: Install Linux build deps
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential cmake pkg-config \
-            libgtk-3-dev libwebkit2gtk-4.1-dev \
-            libayatana-appindicator3-dev librsvg2-dev
+          sudo apt-get install -y build-essential cmake pkg-config libgtk-3-dev libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev
 
       - name: Prepare .deb package
         run: |
@@ -150,7 +127,6 @@ jobs:
           mkdir -p "${DEB_DIR}/usr/share/icons/hicolor/256x256/apps"
           mkdir -p "${DEB_DIR}/DEBIAN"
 
-          # Find build output directory dynamically
           BUILD_DIR=$(find build/ -maxdepth 1 -type d -name '*linux*' | head -1)
           if [ -z "$BUILD_DIR" ]; then
             echo "ERROR: No linux build directory found in build/"
@@ -160,43 +136,15 @@ jobs:
           echo "Using build directory: $BUILD_DIR"
           cp -r "${BUILD_DIR}/"/* "${DEB_DIR}/opt/${APP_NAME}/"
 
-          # List what we're packaging
-          echo "=== Package contents ==="
-          ls -la "${DEB_DIR}/opt/${APP_NAME}/"
-          find "${DEB_DIR}/opt/${APP_NAME}/" -name "*.so" -o -name "launcher" -o -name "*.bin" | head -20
-
-          # Copy icon
           cp assets/icon.png "${DEB_DIR}/usr/share/icons/hicolor/256x256/apps/${APP_NAME}.png"
 
-          # Create control file
-          cat <<EOF > "${DEB_DIR}/DEBIAN/control"
-Package: ${APP_NAME}
-Version: ${VERSION}
-Section: utils
-Priority: optional
-Architecture: amd64
-Maintainer: Robson Cassiano <robson.cassiano@pm.me>
-Description: Easy Local Chat - Run AI locally with no configuration
- A cross-platform desktop application that runs Large Language Models locally.
- Automates the installation of an optimized inference engine and the Gemma-4 model.
-EOF
+          # Control file
+          printf 'Package: %s\nVersion: %s\nSection: utils\nPriority: optional\nArchitecture: amd64\nMaintainer: Robson Cassiano <robson.cassiano@pm.me>\nDescription: Easy Local Chat - Run AI locally\n A cross-platform desktop app that runs LLMs locally.\n' "${APP_NAME}" "${VERSION}" > "${DEB_DIR}/DEBIAN/control"
 
-          # Create .desktop file
-          cat <<EOF > "${DEB_DIR}/usr/share/applications/${APP_NAME}.desktop"
-[Desktop Entry]
-Version=1.0
-Type=Application
-Name=Easy Local Chat
-Exec=/opt/${APP_NAME}/bin/launcher
-Icon=${APP_NAME}
-Terminal=false
-Categories=Development;ArtificialIntelligence;
-Comment=Private AI assistant running locally with Gemma-4
-EOF
+          # Desktop entry
+          printf '[Desktop Entry]\nVersion=1.0\nType=Application\nName=Easy Local Chat\nExec=/opt/%s/bin/launcher\nIcon=%s\nTerminal=false\nCategories=Development;ArtificialIntelligence;\nComment=Private AI assistant running locally with Gemma-4\n' "${APP_NAME}" "${APP_NAME}" > "${DEB_DIR}/usr/share/applications/${APP_NAME}.desktop"
 
           chmod +x "${DEB_DIR}/opt/${APP_NAME}/bin/launcher" 2>/dev/null || true
-
-          # Build the .deb
           dpkg-deb --build "${DEB_DIR}" "${APP_NAME}_${VERSION}_amd64.deb"
 
       - name: Upload .deb artifact
@@ -206,7 +154,6 @@ EOF
           path: "*.deb"
           retention-days: 14
 
-  # Build Linux ARM64
   build-linux-arm64:
     name: Build Linux (ARM64)
     runs-on: ubuntu-24.04-arm
@@ -214,18 +161,14 @@ EOF
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
-
       - name: Install dependencies
         run: bun install
-
       - name: Vite build
         run: bunx vite build
-
       - name: Build Electrobun app
         run: bunx electrobun build --env=canary
         env:
@@ -234,9 +177,7 @@ EOF
       - name: Install Linux build deps
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential cmake pkg-config \
-            libgtk-3-dev libwebkit2gtk-4.1-dev \
-            libayatana-appindicator3-dev librsvg2-dev
+          sudo apt-get install -y build-essential cmake pkg-config libgtk-3-dev libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev
 
       - name: Prepare .deb package
         run: |
@@ -250,7 +191,6 @@ EOF
           mkdir -p "${DEB_DIR}/usr/share/icons/hicolor/256x256/apps"
           mkdir -p "${DEB_DIR}/DEBIAN"
 
-          # Find build output directory dynamically
           BUILD_DIR=$(find build/ -maxdepth 1 -type d -name '*linux*arm*' | head -1)
           [ -z "$BUILD_DIR" ] && BUILD_DIR=$(find build/ -maxdepth 1 -type d -name '*linux*' | head -1)
           if [ -z "$BUILD_DIR" ]; then
@@ -261,41 +201,15 @@ EOF
           echo "Using build directory: $BUILD_DIR"
           cp -r "${BUILD_DIR}/"/* "${DEB_DIR}/opt/${APP_NAME}/"
 
-          echo "=== Package contents ==="
-          ls -la "${DEB_DIR}/opt/${APP_NAME}/"
-
-          # Copy icon
           cp assets/icon.png "${DEB_DIR}/usr/share/icons/hicolor/256x256/apps/${APP_NAME}.png"
 
-          # Create control file
-          cat <<EOF > "${DEB_DIR}/DEBIAN/control"
-Package: ${APP_NAME}
-Version: ${VERSION}
-Section: utils
-Priority: optional
-Architecture: arm64
-Maintainer: Robson Cassiano <robson.cassiano@pm.me>
-Description: Easy Local Chat - Run AI locally with no configuration
- A cross-platform desktop application that runs Large Language Models locally.
- Automates the installation of an optimized inference engine and the Gemma-4 model.
-EOF
+          # Control file
+          printf 'Package: %s\nVersion: %s\nSection: utils\nPriority: optional\nArchitecture: arm64\nMaintainer: Robson Cassiano <robson.cassiano@pm.me>\nDescription: Easy Local Chat - Run AI locally\n A cross-platform desktop app that runs LLMs locally.\n' "${APP_NAME}" "${VERSION}" > "${DEB_DIR}/DEBIAN/control"
 
-          # Create .desktop file
-          cat <<EOF > "${DEB_DIR}/usr/share/applications/${APP_NAME}.desktop"
-[Desktop Entry]
-Version=1.0
-Type=Application
-Name=Easy Local Chat
-Exec=/opt/${APP_NAME}/bin/launcher
-Icon=${APP_NAME}
-Terminal=false
-Categories=Development;ArtificialIntelligence;
-Comment=Private AI assistant running locally with Gemma-4
-EOF
+          # Desktop entry
+          printf '[Desktop Entry]\nVersion=1.0\nType=Application\nName=Easy Local Chat\nExec=/opt/%s/bin/launcher\nIcon=%s\nTerminal=false\nCategories=Development;ArtificialIntelligence;\nComment=Private AI assistant running locally with Gemma-4\n' "${APP_NAME}" "${APP_NAME}" > "${DEB_DIR}/usr/share/applications/${APP_NAME}.desktop"
 
           chmod +x "${DEB_DIR}/opt/${APP_NAME}/bin/launcher" 2>/dev/null || true
-
-          # Build the .deb
           dpkg-deb --build "${DEB_DIR}" "${APP_NAME}_${VERSION}_arm64.deb"
 
       - name: Upload .deb artifact
@@ -305,12 +219,10 @@ EOF
           path: "*.deb"
           retention-days: 14
 
-  # Create Release
   release:
     name: Create Release
     runs-on: ubuntu-latest
-    needs:
-      [build-macos-arm64, build-windows-x64, build-linux-x64, build-linux-arm64]
+    needs: [build-macos-arm64, build-windows-x64, build-linux-x64, build-linux-arm64]
     if: >-
       startsWith(github.ref, 'refs/tags/v') ||
       (github.event_name == 'workflow_dispatch' && github.event.inputs.release == 'true')
@@ -319,7 +231,6 @@ EOF
     steps:
       - name: Download all artifacts
         uses: actions/download-artifact@v4
-
       - name: Archive builds
         run: |
           mkdir -p builds
@@ -328,9 +239,7 @@ EOF
               zip -r "builds/${dir}.zip" "$dir"
             fi
           done
-          # Copy .deb files to builds too
           find . -name "*.deb" -exec cp {} builds/ \;
-
       - name: Create Release
         uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/tags/v')
@@ -341,7 +250,6 @@ EOF
           prerelease: false
           generate_release_notes: true
           files: builds/*
-
       - name: Create Canary Release
         uses: softprops/action-gh-release@v2
         if: github.event_name == 'workflow_dispatch' && github.event.inputs.release == 'true'
