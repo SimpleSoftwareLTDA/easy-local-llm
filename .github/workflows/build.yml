@@ -236,10 +236,13 @@ jobs:
           mkdir -p builds
           for dir in easyllocalchat-*; do
             if [ -d "$dir" ]; then
-              zip -r "builds/${dir}.zip" "$dir"
+              if ls "$dir"/*.deb 1>/dev/null 2>&1; then
+                cp "$dir"/*.deb builds/
+              else
+                zip -r "builds/${dir}.zip" "$dir"
+              fi
             fi
           done
-          find . -name "*.deb" -exec cp {} builds/ \;
       - name: Create Release
         uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/tags/v')
