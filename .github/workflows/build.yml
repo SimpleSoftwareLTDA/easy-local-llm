@@ -259,7 +259,7 @@ jobs:
         with:
           tag_name: canary-${{ github.sha }}
           name: Canary Build ${{ github.sha }}
-          draft: false
+          draft: true
           prerelease: true
           generate_release_notes: true
           files: builds/*
