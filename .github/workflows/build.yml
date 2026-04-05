@@ -131,11 +131,79 @@ jobs:
         env:
           NODE_ENV: production
 
-      - name: Upload artifact
+      - name: Install Linux build deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential cmake pkg-config \
+            libgtk-3-dev libwebkit2gtk-4.1-dev \
+            libayatana-appindicator3-dev librsvg2-dev
+
+      - name: Prepare .deb package
+        run: |
+          APP_NAME="easy-local-chat"
+          VERSION="${GITHUB_REF#refs/tags/v}"
+          [ "$VERSION" = "$GITHUB_REF" ] && VERSION="0.0.0-ci.${GITHUB_RUN_NUMBER}"
+
+          DEB_DIR="deb-package"
+          mkdir -p "${DEB_DIR}/opt/${APP_NAME}"
+          mkdir -p "${DEB_DIR}/usr/share/applications"
+          mkdir -p "${DEB_DIR}/usr/share/icons/hicolor/256x256/apps"
+          mkdir -p "${DEB_DIR}/DEBIAN"
+
+          # Find build output directory dynamically
+          BUILD_DIR=$(find build/ -maxdepth 1 -type d -name '*linux*' | head -1)
+          if [ -z "$BUILD_DIR" ]; then
+            echo "ERROR: No linux build directory found in build/"
+            ls -la build/
+            exit 1
+          fi
+          echo "Using build directory: $BUILD_DIR"
+          cp -r "${BUILD_DIR}/"/* "${DEB_DIR}/opt/${APP_NAME}/"
+
+          # List what we're packaging
+          echo "=== Package contents ==="
+          ls -la "${DEB_DIR}/opt/${APP_NAME}/"
+          find "${DEB_DIR}/opt/${APP_NAME}/" -name "*.so" -o -name "launcher" -o -name "*.bin" | head -20
+
+          # Copy icon
+          cp assets/icon.png "${DEB_DIR}/usr/share/icons/hicolor/256x256/apps/${APP_NAME}.png"
+
+          # Create control file
+          cat <<EOF > "${DEB_DIR}/DEBIAN/control"
+Package: ${APP_NAME}
+Version: ${VERSION}
+Section: utils
+Priority: optional
+Architecture: amd64
+Maintainer: Robson Cassiano <robson.cassiano@pm.me>
+Description: Easy Local Chat - Run AI locally with no configuration
+ A cross-platform desktop application that runs Large Language Models locally.
+ Automates the installation of an optimized inference engine and the Gemma-4 model.
+EOF
+
+          # Create .desktop file
+          cat <<EOF > "${DEB_DIR}/usr/share/applications/${APP_NAME}.desktop"
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Easy Local Chat
+Exec=/opt/${APP_NAME}/bin/launcher
+Icon=${APP_NAME}
+Terminal=false
+Categories=Development;ArtificialIntelligence;
+Comment=Private AI assistant running locally with Gemma-4
+EOF
+
+          chmod +x "${DEB_DIR}/opt/${APP_NAME}/bin/launcher" 2>/dev/null || true
+
+          # Build the .deb
+          dpkg-deb --build "${DEB_DIR}" "${APP_NAME}_${VERSION}_amd64.deb"
+
+      - name: Upload .deb artifact
         uses: actions/upload-artifact@v4
         with:
-          name: easyllocalchat-linux-x64
-          path: build/
+          name: easyllocalchat-linux-x64-deb
+          path: "*.deb"
           retention-days: 14
 
   # Build Linux ARM64
@@ -163,11 +231,78 @@ jobs:
         env:
           NODE_ENV: production
 
-      - name: Upload artifact
+      - name: Install Linux build deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential cmake pkg-config \
+            libgtk-3-dev libwebkit2gtk-4.1-dev \
+            libayatana-appindicator3-dev librsvg2-dev
+
+      - name: Prepare .deb package
+        run: |
+          APP_NAME="easy-local-chat"
+          VERSION="${GITHUB_REF#refs/tags/v}"
+          [ "$VERSION" = "$GITHUB_REF" ] && VERSION="0.0.0-ci.${GITHUB_RUN_NUMBER}"
+
+          DEB_DIR="deb-package"
+          mkdir -p "${DEB_DIR}/opt/${APP_NAME}"
+          mkdir -p "${DEB_DIR}/usr/share/applications"
+          mkdir -p "${DEB_DIR}/usr/share/icons/hicolor/256x256/apps"
+          mkdir -p "${DEB_DIR}/DEBIAN"
+
+          # Find build output directory dynamically
+          BUILD_DIR=$(find build/ -maxdepth 1 -type d -name '*linux*arm*' | head -1)
+          [ -z "$BUILD_DIR" ] && BUILD_DIR=$(find build/ -maxdepth 1 -type d -name '*linux*' | head -1)
+          if [ -z "$BUILD_DIR" ]; then
+            echo "ERROR: No linux build directory found in build/"
+            ls -la build/
+            exit 1
+          fi
+          echo "Using build directory: $BUILD_DIR"
+          cp -r "${BUILD_DIR}/"/* "${DEB_DIR}/opt/${APP_NAME}/"
+
+          echo "=== Package contents ==="
+          ls -la "${DEB_DIR}/opt/${APP_NAME}/"
+
+          # Copy icon
+          cp assets/icon.png "${DEB_DIR}/usr/share/icons/hicolor/256x256/apps/${APP_NAME}.png"
+
+          # Create control file
+          cat <<EOF > "${DEB_DIR}/DEBIAN/control"
+Package: ${APP_NAME}
+Version: ${VERSION}
+Section: utils
+Priority: optional
+Architecture: arm64
+Maintainer: Robson Cassiano <robson.cassiano@pm.me>
+Description: Easy Local Chat - Run AI locally with no configuration
+ A cross-platform desktop application that runs Large Language Models locally.
+ Automates the installation of an optimized inference engine and the Gemma-4 model.
+EOF
+
+          # Create .desktop file
+          cat <<EOF > "${DEB_DIR}/usr/share/applications/${APP_NAME}.desktop"
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Easy Local Chat
+Exec=/opt/${APP_NAME}/bin/launcher
+Icon=${APP_NAME}
+Terminal=false
+Categories=Development;ArtificialIntelligence;
+Comment=Private AI assistant running locally with Gemma-4
+EOF
+
+          chmod +x "${DEB_DIR}/opt/${APP_NAME}/bin/launcher" 2>/dev/null || true
+
+          # Build the .deb
+          dpkg-deb --build "${DEB_DIR}" "${APP_NAME}_${VERSION}_arm64.deb"
+
+      - name: Upload .deb artifact
         uses: actions/upload-artifact@v4
         with:
-          name: easyllocalchat-linux-arm64
-          path: build/
+          name: easyllocalchat-linux-arm64-deb
+          path: "*.deb"
           retention-days: 14
 
   # Create Release
@@ -193,6 +328,8 @@ jobs:
               zip -r "builds/${dir}.zip" "$dir"
             fi
           done
+          # Copy .deb files to builds too
+          find . -name "*.deb" -exec cp {} builds/ \;
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
@@ -203,7 +340,7 @@ jobs:
           draft: false
           prerelease: false
           generate_release_notes: true
-          files: builds/*.zip
+          files: builds/*
 
       - name: Create Canary Release
         uses: softprops/action-gh-release@v2
@@ -214,4 +351,4 @@ jobs:
           draft: false
           prerelease: true
           generate_release_notes: true
-          files: builds/*.zip
+          files: builds/*
