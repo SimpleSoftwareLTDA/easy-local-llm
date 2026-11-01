@@ -1,5 +1,5 @@
 import { BrowserWindow, Updater } from "electrobun/bun";
-import { existsSync, mkdirSync, createWriteStream } from "node:fs";
+import { existsSync, mkdirSync, createWriteStream, renameSync, unlinkSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { homedir } from "node:os";
 
@@ -13,12 +13,15 @@ let downloadProgress = 0;
 let serverProc: any = null;
 
 async function downloadFile(url: string, path: string) {
+	const tempPath = `${path}.tmp`;
+	if (existsSync(tempPath)) unlinkSync(tempPath);
+
 	const response = await fetch(url);
 	if (!response.ok) throw new Error(`Failed to fetch ${url}`);
 	const totalSize = Number(response.headers.get("content-length")) || 0;
 	let downloadedSize = 0;
 
-	const stream = createWriteStream(path);
+	const stream = createWriteStream(tempPath);
 	//@ts-ignore
 	const reader = response.body.getReader();
 
@@ -32,6 +35,14 @@ async function downloadFile(url: string, path: string) {
 		}
 	}
 	stream.end();
+
+	await new Promise<void>((resolve, reject) => {
+		stream.on("finish", () => {
+			renameSync(tempPath, path);
+			resolve();
+		});
+		stream.on("error", reject);
+	});
 }
 
 async function runCommand(cmd: string[]): Promise<boolean> {
@@ -103,7 +114,13 @@ async function setupAndLaunch() {
 			await installLlamaCpp();
 		}
 
-		// 4. Download model if missing
+		// 4. Download model if missing or incomplete
+		const MIN_EXPECTED_SIZE = 5_000_000_000;
+		if (existsSync(modelFile) && statSync(modelFile).size < MIN_EXPECTED_SIZE) {
+			console.log("Found corrupted or incomplete model file. Removing...");
+			unlinkSync(modelFile);
+		}
+
 		if (!existsSync(modelFile)) {
 			llmStatus = "downloading";
 			downloadProgress = 0;
