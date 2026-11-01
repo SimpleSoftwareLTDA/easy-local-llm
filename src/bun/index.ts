@@ -115,7 +115,7 @@ async function setupAndLaunch() {
 		}
 
 		// 4. Download model if missing or incomplete
-		const MIN_EXPECTED_SIZE = 5_000_000_000;
+		const MIN_EXPECTED_SIZE = 4_500_000_000;
 		if (existsSync(modelFile) && statSync(modelFile).size < MIN_EXPECTED_SIZE) {
 			console.log("Found corrupted or incomplete model file. Removing...");
 			unlinkSync(modelFile);
@@ -127,7 +127,7 @@ async function setupAndLaunch() {
 			statusMessage = "Baixando modelo de linguagem...";
 			console.log(statusMessage);
 			await downloadFile(
-				"https://huggingface.co/lmstudio-community/gemma-4-E4B-it-GGUF/resolve/main/gemma-4-E4B-it-Q4_K_M.gguf?download=true",
+				"https://huggingface.co/unsloth/gemma-4-E4B-it-GGUF/resolve/main/gemma-4-E4B-it-IQ4_XS.gguf?download=true",
 				modelFile
 			);
 		}
@@ -143,6 +143,7 @@ async function setupAndLaunch() {
 			"--port", "11444",
 			"-c", "2048",
 			"-np", "1",
+			"--poll", "0",
 			"--flash-attn", "on",
 			"-ngl", "99",
 		], {
